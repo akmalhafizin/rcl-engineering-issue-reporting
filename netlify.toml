@@ -1,7 +1,6 @@
 # Netlify Configuration for RCL Engineering Issue Reporting System
 
 [build]
-  command = "echo 'Static site - no build needed'"
   command = "node generate-config.js"
   publish = "."
 
