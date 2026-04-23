@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Report Issue | RCL Engineering</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary-container": "#d6e0f3",
+                        "on-primary-fixed": "#410000",
+                        "on-surface": "#191c1e",
+                        "on-background": "#191c1e",
+                        "tertiary-container": "#d9352f",
+                        "background": "#f8f9fb",
+                        "on-error-container": "#93000a",
+                        "on-secondary-container": "#596373",
+                        "on-primary-fixed-variant": "#930002",
+                        "on-tertiary-container": "#fffbff",
+                        "surface-container": "#edeef0",
+                        "surface-tint": "#c00004",
+                        "outline": "#926f69",
+                        "inverse-primary": "#ffb4a9",
+                        "tertiary-fixed": "#ffdad6",
+                        "on-surface-variant": "#5d3f3b",
+                        "secondary": "#555f6f",
+                        "error": "#ba1a1a",
+                        "surface-bright": "#f8f9fb",
+                        "primary-fixed": "#ffdad5",
+                        "on-tertiary": "#ffffff",
+                        "secondary-fixed": "#d9e3f6",
+                        "surface-container-low": "#f3f4f6",
+                        "outline-variant": "#e7bdb7",
+                        "on-secondary-fixed-variant": "#3d4756",
+                        "on-primary-container": "#fffbfa",
+                        "primary-fixed-dim": "#ffb4a9",
+                        "inverse-on-surface": "#f0f1f3",
+                        "inverse-surface": "#2e3132",
+                        "on-primary": "#ffffff",
+                        "surface-container-highest": "#e1e2e4",
+                        "tertiary": "#b5191a",
+                        "primary": "#bb0004",
+                        "secondary-fixed-dim": "#bdc7d9",
+                        "on-tertiary-fixed": "#410002",
+                        "on-tertiary-fixed-variant": "#93000b",
+                        "primary-container": "#e1251b",
+                        "surface-container-lowest": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "surface-container-high": "#e7e8ea",
+                        "surface-dim": "#d9dadc",
+                        "on-secondary-fixed": "#121c2a",
+                        "surface-variant": "#e1e2e4",
+                        "on-secondary": "#ffffff",
+                        "tertiary-fixed-dim": "#ffb4ab",
+                        "surface": "#f8f9fb",
+                        "on-error": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "container-max": "1280px",
+                        "section-gap": "80px",
+                        "margin-edge": "32px",
+                        "gutter": "24px",
+                        "unit": "8px"
+                    },
+                    "fontFamily": {
+                        "h1": ["Inter"],
+                        "h2": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "body-md": ["Inter"],
+                        "h3": ["Inter"]
+                    },
+                    "fontSize": {
+                        "h1": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "h2": ["36px", {"lineHeight": "1.2", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "body-lg": ["18px", {"lineHeight": "1.6", "letterSpacing": "0", "fontWeight": "400"}],
+                        "label-sm": ["14px", {"lineHeight": "1.2", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                        "body-md": ["16px", {"lineHeight": "1.5", "letterSpacing": "0", "fontWeight": "400"}],
+                        "h3": ["24px", {"lineHeight": "1.3", "letterSpacing": "0", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-background text-on-surface min-h-screen flex flex-col">
+    <!-- TopAppBar -->
+    <header class="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-gray-200">
+        <div class="flex justify-between items-center px-6 md:px-12 py-4 max-w-full mx-auto">
+            <div class="flex items-center gap-3">
+                <!-- <img alt="RCL Engineering Logo" class="h-10 w-auto" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' fill='%23bb0004'/%3E%3Ctext x='50%25' y='50%25' font-size='24' font-weight='bold' fill='white' text-anchor='middle' dominant-baseline='middle'%3ERCL%3C/text%3E%3C/svg%3E"/> -->
+                <img alt="RCL Engineering Logo" class="h-20 w-auto" src="assets/images/logo.png" />
+                <span class="text-xl font-bold tracking-tighter text-gray-900" onclick="app.navigate('home')">RCL Engineering</span>
+            </div>
+            <!-- <div class="text-xl font-bold tracking-tighter text-gray-900 cursor-pointer" onclick="app.navigate('home')">RCL Engineering</div> -->
+            <nav class="hidden md:flex space-x-8">
+                <a class="font-sans antialiased text-sm font-medium text-gray-600 hover:text-red-600 transition-colors duration-200 cursor-pointer" onclick="app.navigate('home')">Home</a>
+                <a class="font-sans antialiased text-sm font-medium text-red-600 border-b-2 border-red-600 transition-colors duration-200 cursor-pointer" href="#">Report Issue</a>
+                <a class="font-sans antialiased text-sm font-medium text-gray-600 hover:text-red-600 transition-colors duration-200 cursor-pointer" onclick="app.navigate('login')">Admin</a>
+            </nav>
+        </div>
+    </header>
+    <main class="flex-grow pt-24 pb-20 px-4 md:px-0">
+        <!-- Hero Section for Context -->
+        <div class="max-w-4xl mx-auto mb-12">
+            <span class="text-primary font-label-sm uppercase tracking-widest mb-4 block">Service Desk</span>
+            <h1 class="font-h1 text-h1 text-on-surface mb-4">Report an Issue</h1>
+            <p class="font-body-lg text-body-lg text-secondary max-w-2xl">Submit technical or facilities-related issues directly to our engineering team for rapid intervention and resolution.</p>
+        </div>
+        <!-- Issue Submission Form Container -->
+        <div class="max-w-4xl mx-auto bg-white border border-outline-variant shadow-sm rounded-lg overflow-hidden">
+            <form id="issueForm" class="divide-y divide-outline-variant">
+                <!-- Section 1: Individual Details -->
+                <div class="p-8">
+                    <div class="flex items-center gap-3 mb-8">
+                        <span class="material-symbols-outlined text-primary" data-icon="person">person</span>
+                        <h2 class="font-h3 text-h3">Individual Details</h2>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-gutter">
+                        <div class="space-y-2">
+                            <label class="font-label-sm text-label-sm text-on-surface-variant">FULL NAME</label>
+                            <input class="w-full h-12 px-4 border border-outline rounded focus:ring-1 focus:ring-primary focus:border-primary bg-surface-bright outline-none transition-all" placeholder="e.g. John Doe" type="text" name="fullName" required/>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="font-label-sm text-label-sm text-on-surface-variant">PHONE NUMBER</label>
+                            <input class="w-full h-12 px-4 border border-outline rounded focus:ring-1 focus:ring-primary focus:border-primary bg-surface-bright outline-none transition-all" placeholder="+60 12-345 6789" type="tel" name="phone" required/>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="font-label-sm text-label-sm text-on-surface-variant">EMAIL ADDRESS (OPTIONAL)</label>
+                            <input class="w-full h-12 px-4 border border-outline rounded focus:ring-1 focus:ring-primary focus:border-primary bg-surface-bright outline-none transition-all" placeholder="e.g. john@company.com" type="email" name="email"/>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="font-label-sm text-label-sm text-on-surface-variant">COMPANY NAME</label>
+                            <input class="w-full h-12 px-4 border border-outline rounded focus:ring-1 focus:ring-primary focus:border-primary bg-surface-bright outline-none transition-all" placeholder="Organization" type="text" name="company" required/>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="font-label-sm text-label-sm text-on-surface-variant">GENERAL LOCATION</label>
+                            <input class="w-full h-12 px-4 border border-outline rounded focus:ring-1 focus:ring-primary focus:border-primary bg-surface-bright outline-none transition-all" placeholder="City or Region" type="text" name="location" required/>
+                        </div>
+                    </div>
+                </div>
+                <!-- Section 2: Issue Details -->
+                <div class="p-8 bg-surface-container-lowest">
+                    <div class="flex items-center gap-3 mb-8">
+                        <span class="material-symbols-outlined text-primary" data-icon="report_problem">report_problem</span>
+                        <h2 class="font-h3 text-h3">Issue Details</h2>
+                    </div>
+                    <div class="space-y-gutter">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-gutter">
+                            <div class="space-y-2">
+                                <label class="font-label-sm text-label-sm text-on-surface-variant">ISSUE CATEGORY</label>
+                                <select class="w-full h-12 px-4 border border-outline rounded focus:ring-1 focus:ring-primary focus:border-primary bg-surface-bright outline-none transition-all appearance-none" name="category" required>
+                                    <option value="">Select Category</option>
+                                    <option value="Mechanical Failure">Mechanical Failure</option>
+                                    <option value="Electrical Malfunction">Electrical Malfunction</option>
+                                    <option value="Structural Damage">Structural Damage</option>
+                                    <option value="HVAC Issues">HVAC Issues</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div class="space-y-2">
+                                <label class="font-label-sm text-label-sm text-on-surface-variant">SPECIFIC LOCATION DETAIL</label>
+                                <input class="w-full h-12 px-4 border border-outline rounded focus:ring-1 focus:ring-primary focus:border-primary bg-surface-bright outline-none transition-all" placeholder="e.g. Block B, Level 4, Room 402" type="text" name="specificLocation" required/>
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="font-label-sm text-label-sm text-on-surface-variant">ISSUE DESCRIPTION</label>
+                            <textarea class="w-full p-4 border border-outline rounded focus:ring-1 focus:ring-primary focus:border-primary bg-surface-bright outline-none transition-all" placeholder="Provide a detailed description of the engineering fault or facility issue..." rows="4" name="description" required></textarea>
+                        </div>
+                        <div class="space-y-6 pt-4">
+                            <div class="flex justify-between items-center">
+                                <label class="font-label-sm text-label-sm text-on-surface-variant">URGENCY LEVEL</label>
+                                <span class="text-primary font-bold text-sm" id="urgencyValue">3 - Medium</span>
+                            </div>
+                            <div class="px-2">
+                                <input class="w-full h-2 bg-surface-container-highest rounded-lg appearance-none cursor-pointer accent-primary" max="5" min="1" type="range" value="3" name="urgency" id="urgencySlider"/>
+                                <div class="flex justify-between mt-2 text-[10px] font-bold text-secondary tracking-tighter uppercase">
+                                    <span>1 - Low</span>
+                                    <span>2</span>
+                                    <span>3 - Medium</span>
+                                    <span>4</span>
+                                    <span>5 - Critical</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Form Actions -->
+                <div class="p-8 bg-gray-50 flex flex-col md:flex-row justify-between items-center gap-6">
+                    <div class="flex items-center gap-2 text-secondary">
+                        <span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">lock</span>
+                        <p class="text-xs">Your data is secured under our ISO-certified privacy standards.</p>
+                    </div>
+                    <div class="flex gap-4 w-full md:w-auto">
+                        <button class="flex-1 md:flex-none px-8 py-3 font-label-sm border border-outline text-on-surface hover:bg-surface-container transition-colors rounded" type="reset" onclick="app.navigate('home')">CANCEL</button>
+                        <button class="flex-1 md:flex-none px-12 py-3 font-label-sm bg-primary text-on-primary hover:bg-tertiary transition-colors shadow-lg rounded" type="submit">SUBMIT ISSUE</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <!-- Secondary Info Cards -->
+        <div class="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-gutter mt-12">
+            <div class="bg-white p-6 border border-outline-variant rounded shadow-sm">
+                <span class="material-symbols-outlined text-primary mb-4" data-icon="support_agent">support_agent</span>
+                <h4 class="font-h3 text-sm font-bold mb-2">Technical Support</h4>
+                <p class="text-xs text-secondary">Speak directly with a technician for urgent critical failures.</p>
+                <a class="inline-block mt-4 text-xs font-bold text-primary border-b border-primary" href="#">CALL NOW</a>
+            </div>
+            <div class="bg-white p-6 border border-outline-variant rounded shadow-sm">
+                <span class="material-symbols-outlined text-primary mb-4" data-icon="timer">timer</span>
+                <h4 class="font-h3 text-sm font-bold mb-2">Response Time</h4>
+                <p class="text-xs text-secondary">Average response within 4 hours for level 4-5 issues.</p>
+                <a class="inline-block mt-4 text-xs font-bold text-primary border-b border-primary" href="#">SLA DETAILS</a>
+            </div>
+            <div class="bg-white p-6 border border-outline-variant rounded shadow-sm">
+                <span class="material-symbols-outlined text-primary mb-4" data-icon="track_changes">track_changes</span>
+                <h4 class="font-h3 text-sm font-bold mb-2">Track Status</h4>
+                <p class="text-xs text-secondary">Use your ticket ID sent via email to track repair progress.</p>
+                <a class="inline-block mt-4 text-xs font-bold text-primary border-b border-primary" href="#">TRACK ISSUE</a>
+            </div>
+        </div>
+    </main>
+    <!-- Footer -->
+    <footer class="w-full mt-auto bg-gray-50 border-t border-gray-200">
+        <div class="flex flex-col md:flex-row justify-between items-center px-8 py-12 gap-6 max-w-full mx-auto">
+            <div class="flex flex-col gap-2 text-center md:text-left">
+                <span class="text-lg font-bold text-gray-900">RCL Engineering & Facilities Sdn Bhd</span>
+                <span class="font-sans text-xs tracking-wide text-gray-500">SSM: 202501015082</span>
+                <span class="font-sans text-xs tracking-wide text-gray-500">© 2026 RCL Engineering & Facilities Sdn Bhd. All rights reserved.</span>
+            </div>
+            <div class="flex flex-wrap justify-center gap-8">
+                <a class="font-sans text-xs tracking-wide text-gray-500 hover:text-gray-900 transition-opacity opacity-80 hover:opacity-100" href="#">Privacy Policy</a>
+                <a class="font-sans text-xs tracking-wide text-gray-500 hover:text-gray-900 transition-opacity opacity-80 hover:opacity-100" href="#">Terms of Service</a>
+                <a class="font-sans text-xs tracking-wide text-gray-500 hover:text-gray-900 transition-opacity opacity-80 hover:opacity-100" href="#">Contact Support</a>
+            </div>
+        </div>
+    </footer>
+    <script src="assets/js/config.js"></script>
+    <script src="assets/js/app.js"></script>
+</body>
+</html>
