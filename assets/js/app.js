@@ -251,7 +251,7 @@ const app = {
         tableBody.innerHTML = '';
         
         if (tickets.length === 0) {
-            tableBody.innerHTML = '<tr class="hover:bg-gray-50 transition-colors"><td colspan="6" class="px-6 py-8 text-center text-gray-500">No tickets yet. Submitted issues will appear here.</td></tr>';
+            tableBody.innerHTML = '<tr class="hover:bg-gray-50 transition-colors"><td colspan="7" class="px-6 py-8 text-center text-gray-500">No tickets yet. Submitted issues will appear here.</td></tr>';
             return;
         }
         
@@ -336,6 +336,15 @@ const app = {
             
             statusCell.appendChild(statusSelect);
             
+            // Create action cell with delete button
+            const actionCell = document.createElement('td');
+            actionCell.className = 'px-6 py-4';
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'px-3 py-1.5 bg-red-50 text-red-700 border border-red-200 text-xs font-bold rounded hover:bg-red-100 transition-colors';
+            deleteBtn.textContent = 'DELETE';
+            deleteBtn.onclick = () => app.removeTicket(ticket.id);
+            actionCell.appendChild(deleteBtn);
+            
             // Append all cells to row
             row.appendChild(idCell);
             row.appendChild(dateCell);
@@ -343,6 +352,7 @@ const app = {
             row.appendChild(companyCell);
             row.appendChild(urgencyCell);
             row.appendChild(statusCell);
+            row.appendChild(actionCell);
             
             tableBody.appendChild(row);
         });
@@ -359,6 +369,21 @@ const app = {
         });
         storageUtil.setItem('rcl_tickets', JSON.stringify(tickets));
         this.displayAdminDashboard();
+    },
+
+    // Remove ticket with confirmation
+    removeTicket(ticketId) {
+        const confirmed = confirm(`Are you sure you want to delete ticket ${ticketId}? This action cannot be undone.`);
+        
+        if (!confirmed) {
+            return;
+        }
+        
+        let tickets = JSON.parse(storageUtil.getItem('rcl_tickets')) || [];
+        tickets = tickets.filter(t => t.id !== ticketId);
+        storageUtil.setItem('rcl_tickets', JSON.stringify(tickets));
+        this.displayAdminDashboard();
+        alert('Ticket deleted successfully.');
     },
 
     // Display ticket details page
