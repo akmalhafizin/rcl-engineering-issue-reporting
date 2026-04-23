@@ -103,7 +103,10 @@
 </head>
 <body class="text-on-surface">
     <!-- SideNavBar -->
-    <aside class="h-screen w-64 fixed left-0 top-0 z-50 bg-gray-50 border-r border-gray-200 flex flex-col py-6 gap-2">
+    <aside id="sidebar" class="top-16 h-[calc(100vh-4rem)] w-64 fixed left-0 z-40 bg-gray-50 border-r border-gray-200 flex flex-col py-6 gap-2 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out">
+        <button onclick="app.toggleSidebar()" class="md:hidden self-end p-2 text-gray-600 hover:bg-gray-50 rounded-full transition-colors">
+            <span class="material-symbols-outlined">close</span>
+        </button>
         <div class="px-6 mb-8 flex flex-col gap-1">
             <img alt="RCL Engineering Logo" class="h-20 w-auto" src="../assets/images/logo.png" />
             <h1 class="text-xl font-black text-red-600 mt-4">RCL Admin</h1>
@@ -134,9 +137,12 @@
         </div>
     </aside>
     <!-- TopAppBar -->
-    <header class="fixed top-0 w-full z-40 bg-white/80 backdrop-blur-md border-b border-gray-200">
-        <div class="flex justify-between items-center h-16 px-6 ml-64">
+    <header class="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-gray-200">
+        <div class="flex justify-between items-center h-16 px-6 md:ml-64">
             <div class="flex items-center gap-4">
+                <button id="sidebarToggle" class="md:hidden p-2 text-gray-600 hover:bg-gray-50 rounded-full transition-colors" onclick="app.toggleSidebar()">
+                    <span class="material-symbols-outlined">menu</span>
+                </button>
                 <span class="font-sans antialiased text-gray-900 font-bold text-lg tracking-tight">Ticket Console</span>
             </div>
             <div class="flex items-center gap-6">
@@ -152,7 +158,7 @@
         </div>
     </header>
     <!-- Main Content Canvas -->
-    <main class="ml-64 pt-24 px-8 pb-12 min-h-screen">
+    <main class="md:ml-64 pt-28 px-8 pb-12 min-h-screen">
         <!-- Summary Cards Bento Grid -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
             <div class="bg-white p-6 rounded-xl border border-gray-200 flex flex-col gap-2">

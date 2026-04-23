@@ -793,6 +793,20 @@ const app = {
             // Refresh the displayed data (re-fetch and re-render)
             this.displayTicketDetails();
         }
+    },
+
+    // Toggle sidebar for mobile
+    toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        if (sidebar) {
+            if (sidebar.classList.contains('-translate-x-full')) {
+                sidebar.classList.remove('-translate-x-full');
+                sidebar.classList.add('translate-x-0');
+            } else {
+                sidebar.classList.remove('translate-x-0');
+                sidebar.classList.add('-translate-x-full');
+            }
+        }
     }
     
 
