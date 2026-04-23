@@ -1,8 +1,8 @@
 // Storage utility to handle localStorage binding correctly
 const storageUtil = {
-    getItem: window.localStorage.getItem.bind(window.localStorage),
-    setItem: window.localStorage.setItem.bind(window.localStorage),
-    removeItem: window.localStorage.removeItem.bind(window.localStorage)
+    getItem: (key) => window.localStorage.getItem(key),
+    setItem: (key, value) => window.localStorage.setItem(key, value),
+    removeItem: (key) => window.localStorage.removeItem(key)
 };
 
 const supabaseClient = window.supabase.createClient(
