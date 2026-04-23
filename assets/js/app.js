@@ -5,6 +5,11 @@ const storageUtil = {
     removeItem: window.localStorage.removeItem.bind(window.localStorage)
 };
 
+const supabaseClient = window.supabase.createClient(
+    config.SUPABASE_URL,
+    config.SUPABASE_ANON_KEY
+);
+
 // RCL Engineering Issue Reporting App
 const app = {
     currentPage: 'home',
@@ -12,9 +17,17 @@ const app = {
     
     // Initialize the app
     init() {
-        this.loadTickets();
+        this.checkLoginStatus();   // async – we'll handle properly
         this.setupEventListeners();
-        this.checkLoginStatus();
+        if (window.location.pathname.includes('admin/dashboard')) {
+            this.loadTickets();
+        }
+        if (window.location.pathname.includes('ticket-details')) {
+            this.displayTicketDetails();
+        }
+        if (window.location.pathname.includes('success')) {
+            this.displaySuccessTicket();
+        }
         console.log('RCL Engineering App Initialized');
     },
     
@@ -41,19 +54,14 @@ const app = {
     
     // Navigate between pages
     navigate(page, ticketId = null) {
-        // If trying to access login but already logged in with valid session, go to dashboard
+        // If trying to access login but already logged in with valid session
         if (page === 'login' && this.isLoggedIn) {
-            const expiryTime = storageUtil.getItem('rcl_session_expiry');
-            if (expiryTime && Date.now() <= parseInt(expiryTime)) {
-                page = 'admin-dashboard';
-            }
+            page = 'admin-dashboard';
         }
-        
-        // If trying to access dashboard but not logged in, go to login
-        if (page === 'admin-dashboard' && !this.isLoggedIn) {
+        // If trying to access dashboard or ticket-details but not logged in
+        if ((page === 'admin-dashboard' || page === 'ticket-details') && !this.isLoggedIn) {
             page = 'login';
         }
-        
         const pages = {
             'home': config.ROOT + 'index.html',
             'report': config.ROOT + 'report-issue.html',
@@ -62,7 +70,6 @@ const app = {
             'admin-dashboard': config.ROOT + 'admin/dashboard.html',
             'ticket-details': config.ROOT + 'ticket-details.html'
         };
-        
         if (pages[page]) {
             let url = pages[page];
             if (page === 'ticket-details' && ticketId) {
@@ -75,46 +82,59 @@ const app = {
     },
     
     // Handle issue form submission
-    handleIssueSubmit(e) {
-        e.preventDefault();
-        
-        const formData = new FormData(e.target);
-        
-        // Create full ticket for local UI
+    // Make sure supabase client is initialized outside your component/class
+    async handleIssueSubmit(e) {
+        e.preventDefault();  // already prevents default
+
+        const formData = new FormData(e.target);  // e.target is the form
+
         const ticket = {
-            id: this.generateTicketId(),
-            fullName: formData.get('fullName'),
+            ticket_id: this.generateTicketId(),   // use this.methodName()
+            full_name: formData.get('fullName'),
             phone: formData.get('phone'),
             email: formData.get('email') || 'Not provided',
             company: formData.get('company'),
             location: formData.get('location'),
             category: formData.get('category'),
-            specificLocation: formData.get('specificLocation'),
+            specific_location: formData.get('specificLocation'),
             description: formData.get('description'),
             urgency: parseInt(formData.get('urgency')),
             status: 'Open',
-            dateSubmitted: new Date().toLocaleString(),
-            timestamp: Date.now()
+            date_submitted: new Date().toISOString()  // ✅ ISO format
+            // timestamp: Date.now()  // optional – you can omit
         };
-        
-        // Save to localStorage for UI display
-        this.saveTicket(ticket);
-        
-        // Store current ticket for success page
-        storageUtil.setItem('rcl_lastTicket', JSON.stringify(ticket));
-        
-        // Submit the form to Netlify
-        e.target.submit();
-    },
-    
+
+        try {
+            const { error } = await supabaseClient
+                .from('tickets')
+                .insert([ticket]);
+
+            if (error) throw error;
+
+            if (!error) {
+                storageUtil.setItem('rcl_lastTicket', JSON.stringify({
+                    id: ticket.ticket_id,          // use ticket_id as display ID
+                    category: ticket.category,
+                    urgency: ticket.urgency,
+                    dateSubmitted: ticket.date_submitted
+                }));
+                this.navigate('success');
+            }
+        } catch (err) {
+            console.error('Supabase insert error:', err);
+            alert('Failed to submit ticket. Please try again.');
+            // Do NOT redirect – stay on the form
+        }
+    },    
     // Load and display tickets on success page
     displaySuccessTicket() {
         const ticket = JSON.parse(storageUtil.getItem('rcl_lastTicket'));
+        console.log('Displaying success ticket:', ticket);
         if (ticket) {
             document.getElementById('summaryCategory').textContent = ticket.category;
             document.getElementById('summaryUrgency').textContent = this.getUrgencyLevel(ticket.urgency);
             document.getElementById('summaryId').textContent = ticket.id;
-            document.getElementById('summaryDate').textContent = ticket.dateSubmitted;
+            document.getElementById('summaryDate').textContent = ticket.dateSubmitted ? new Date(ticket.dateSubmitted).toLocaleString() : '—';
         }
     },
     
@@ -147,138 +167,182 @@ const app = {
     },
     
     // Handle admin login
-    handleLogin(e) {
+    async handleLogin(e) {
         e.preventDefault();
-        
-        const adminId = document.getElementById('admin_id').value;
+        const email = document.getElementById('admin_id').value.trim();
         const password = document.getElementById('password').value;
-        const rememberMe = document.getElementById('remember').checked;
-        
-        // Simple demo authentication
-        if (adminId === config.ADMIN_ID && password === config.ADMIN_PASSWORD) {
-            const loginTime = Date.now();
-            
-            // Set session expiry (8 hours if remember me, otherwise session only)
-            const expiryTime = rememberMe ? loginTime + (8 * 60 * 60 * 1000) : loginTime + (60 * 60 * 1000); // 8 hours or 1 hour
-            
-            storageUtil.setItem('rcl_authed', 'true');
-            storageUtil.setItem('rcl_admin_name', 'Admin User');
-            storageUtil.setItem('rcl_login_time', loginTime.toString());
-            storageUtil.setItem('rcl_session_expiry', expiryTime.toString());
-            storageUtil.setItem('rcl_remember_me', rememberMe.toString());
-            
-            this.isLoggedIn = true;
-            
-            // Redirect to admin dashboard
-            setTimeout(() => {
-                window.location.href = config.ROOT + 'admin/dashboard.html';
-            }, 500);
-        } else {
-            alert('Invalid credentials. Please check your username and password.');
+        // const rememberMe = document.getElementById('remember').checked;
+
+        // Basic validation
+        if (!email || !password) {
+            alert('Please enter both email and password.');
+            return;
+        }
+
+        try {
+            const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+            if (error) throw error;
+
+            if (data.session) {
+                this.isLoggedIn = true;
+                // Supabase automatically stores the session in localStorage (key: 'sb-...')
+                // The session expiry is controlled by Supabase (default 1 hour, can be extended in dashboard)
+                // For "Remember me" we can optionally increase the session expiry via Supabase settings
+                // (Go to Authentication -> Settings -> JWT expiry time – e.g., 8 hours)
+                this.navigate('admin-dashboard');
+            }
+        } catch (err) {
+            console.error('Login error:', err.message);
+            alert('Invalid credentials. Please check your email and password.');
         }
     },
     
     // Check login status
-    checkLoginStatus() {
-        const isAuthed = storageUtil.getItem('rcl_authed') === 'true';
-        const expiryTime = storageUtil.getItem('rcl_session_expiry');
-        
-        // Check if session has expired
-        if (isAuthed && expiryTime) {
-            const currentTime = Date.now();
-            if (currentTime > parseInt(expiryTime)) {
-                // Session expired, log them out
-                this.logout();
-                return;
-            }
+    async checkLoginStatus() {
+        const { data: { session }, error } = await supabaseClient.auth.getSession();
+        if (error) {
+            console.error('Session check error:', error.message);
+            this.isLoggedIn = false;
+        } else {
+            this.isLoggedIn = !!session;   // true if session exists
         }
-        
-        this.isLoggedIn = isAuthed;
-        if (!this.isLoggedIn && (window.location.pathname.includes('admin/dashboard') || window.location.pathname.includes('ticket-details'))) {
-            window.location.href = config.ROOT + 'admin/login.html';
+
+        // Redirect if trying to access protected pages without login
+        const protectedPages = ['admin-dashboard', 'ticket-details'];
+        const currentPage = this.getCurrentPageFromPath(); // define helper
+        if (!this.isLoggedIn && protectedPages.includes(currentPage)) {
+            this.navigate('login');
         }
+    },
+    // Helper to get page name from window.location
+    getCurrentPageFromPath() {
+        const path = window.location.pathname;
+        if (path.includes('admin/dashboard')) return 'admin-dashboard';
+        if (path.includes('ticket-details')) return 'ticket-details';
+        if (path.includes('login')) return 'login';
+        if (path.includes('report-issue')) return 'report';
+        if (path.includes('success')) return 'success';
+        return 'home';
     },
     
     // Logout
-    logout() {
-        storageUtil.removeItem('rcl_authed');
-        storageUtil.removeItem('rcl_admin_name');
-        storageUtil.removeItem('rcl_login_time');
-        storageUtil.removeItem('rcl_session_expiry');
-        storageUtil.removeItem('rcl_remember_me');
+    async logout() {
+        const { error } = await supabaseClient.auth.signOut();
+        if (error) console.error('Logout error:', error.message);
         this.isLoggedIn = false;
-        window.location.href = config.ROOT + 'index.html';
+        this.navigate('home');
     },
 
-    // Save a ticket to localStorage
-    saveTicket(ticket) {
-        let tickets = JSON.parse(storageUtil.getItem('rcl_tickets')) || [];
-        tickets.push(ticket);
-        storageUtil.setItem('rcl_tickets', JSON.stringify(tickets));
-    },
+    // // Save a ticket to localStorage
+    // saveTicket(ticket) {
+    //     let tickets = JSON.parse(storageUtil.getItem('rcl_tickets')) || [];
+    //     tickets.push(ticket);
+    //     storageUtil.setItem('rcl_tickets', JSON.stringify(tickets));
+    // },
 
-    // Load tickets for admin dashboard
-    loadTickets() {
-        if (window.location.pathname.includes('admin/dashboard')) {
-            this.displayAdminDashboard();
-        }
+    // // Load tickets for admin dashboard
+    // async loadTickets() {
+    //     if (window.location.pathname.includes('admin/dashboard')) {
+    //         this.displayAdminDashboard();
+    //     }
         
-        if (window.location.pathname.includes('ticket-details')) {
-            // Ticket details will be loaded by the page's own DOMContentLoaded event
-        }
+    //     if (window.location.pathname.includes('ticket-details')) {
+    //         // Ticket details will be loaded by the page's own DOMContentLoaded event
+    //     }
         
-        if (window.location.pathname.includes('success')) {
-            this.displaySuccessTicket();
-        }
-    },
+    //     if (window.location.pathname.includes('success')) {
+    //         this.displaySuccessTicket();
+    //     }
+    // },
     
-    // Display admin dashboard
+    // // Display admin dashboard
+    // displayAdminDashboard() {
+    //     const tickets = JSON.parse(storageUtil.getItem('rcl_tickets')) || [];
+        
+    //     // Update stats
+    //     document.getElementById('totalTickets').textContent = tickets.length;
+        
+    //     const open = tickets.filter(t => t.status === 'Open').length;
+    //     const inProgress = tickets.filter(t => t.status === 'In Progress').length;
+    //     const resolved = tickets.filter(t => t.status === 'Resolved').length;
+        
+    //     document.getElementById('openTickets').textContent = open;
+    //     document.getElementById('inProgressTickets').textContent = inProgress;
+    //     document.getElementById('resolvedTickets').textContent = resolved;
+        
+    //     // Use the modular renderTickets function
+    //     this.renderTickets();
+    // },
+
     displayAdminDashboard() {
-        const tickets = JSON.parse(storageUtil.getItem('rcl_tickets')) || [];
-        
-        // Update stats
-        document.getElementById('totalTickets').textContent = tickets.length;
-        
+        // Show stats (you can still compute from Supabase, but for now just call loadTickets)
+        this.loadTickets();  // this will fetch and render the table
+
+        // Optional: also fetch stats from Supabase if you want accurate counts
+        // For simplicity, you can later add a separate method to update stats.
+        // For now, keep your old stats update or remove it.
+    },
+
+    // Update the summary cards with ticket counts
+    updateStats(tickets) {
+        const total = tickets.length;
         const open = tickets.filter(t => t.status === 'Open').length;
         const inProgress = tickets.filter(t => t.status === 'In Progress').length;
         const resolved = tickets.filter(t => t.status === 'Resolved').length;
-        
+
+        document.getElementById('totalTickets').textContent = total;
         document.getElementById('openTickets').textContent = open;
         document.getElementById('inProgressTickets').textContent = inProgress;
         document.getElementById('resolvedTickets').textContent = resolved;
-        
-        // Use the modular renderTickets function
-        this.renderTickets();
     },
 
-    // Render tickets in the admin dashboard table
-    renderTickets() {
-        const tickets = JSON.parse(storageUtil.getItem('rcl_tickets')) || [];
-        
-        // Display tickets in table
+    // Make sure supabase client is already initialized
+    // Load tickets from Supabase and render table
+    async loadTickets() {
         const tableBody = document.getElementById('ticketTableBody');
         if (!tableBody) return;
-        
+
+        tableBody.innerHTML = '<tr><td colspan="7" class="px-6 py-8 text-center text-gray-500">Loading tickets...</td></tr>';
+
+        try {
+            const { data: tickets, error } = await supabaseClient
+                .from('tickets')
+                .select('*')
+                .order('date_submitted', { ascending: false });
+
+            if (error) throw error;
+            this.updateStats(tickets || []);
+            this.renderTickets(tickets || []);
+        } catch (err) {
+            console.error('Failed to load tickets:', err);
+            tableBody.innerHTML = '<tr><td colspan="7" class="px-6 py-8 text-center text-red-500">Error loading tickets. Please refresh.</td></tr>';
+        }
+    },
+
+    renderTickets(tickets) {
+        const tableBody = document.getElementById('ticketTableBody');
+        if (!tableBody) return;
         tableBody.innerHTML = '';
-        
-        if (tickets.length === 0) {
+
+        if (!tickets || tickets.length === 0) {
             tableBody.innerHTML = '<tr class="hover:bg-gray-50 transition-colors"><td colspan="7" class="px-6 py-8 text-center text-gray-500">No tickets yet. Submitted issues will appear here.</td></tr>';
             return;
         }
-        
-        // Sort by timestamp descending
-        tickets.sort((a, b) => b.timestamp - a.timestamp);
-        
+
+        const getUrgencyLevel = (urgency) => {
+            const levels = { 1: 'Low', 2: 'Medium', 3: 'High', 4: 'Urgent', 5: 'Critical' };
+            return levels[urgency] || 'Unknown';
+        };
+
         tickets.forEach(ticket => {
             const row = document.createElement('tr');
             row.className = 'hover:bg-gray-50 transition-colors';
-            
+
             const statusColor = {
                 'Open': 'bg-red-50 text-red-700 border-red-200',
                 'In Progress': 'bg-yellow-50 text-yellow-700 border-yellow-200',
                 'Resolved': 'bg-green-50 text-green-700 border-green-200'
             };
-            
             const urgencyColor = {
                 1: 'bg-green-50 text-green-700',
                 2: 'bg-yellow-50 text-yellow-700',
@@ -286,195 +350,274 @@ const app = {
                 4: 'bg-red-50 text-red-700',
                 5: 'bg-red-100 text-red-900'
             };
-            
-            const color = statusColor[ticket.status] || 'bg-gray-50 text-gray-700';
-            const urgencyColor2 = urgencyColor[ticket.urgency] || 'bg-gray-50';
-            
-            // Create cells safely to prevent XSS
+
+            // ID cell
             const idCell = document.createElement('td');
             idCell.className = 'px-6 py-4';
             const idLink = document.createElement('a');
             idLink.className = 'text-primary font-bold hover:underline cursor-pointer';
-            idLink.onclick = () => app.navigate('ticket-details', ticket.id);
-            idLink.textContent = ticket.id;
+            idLink.onclick = () => app.navigate('ticket-details', ticket.ticket_id);
+            idLink.textContent = ticket.ticket_id;
             idCell.appendChild(idLink);
-            
+
+            // Date cell
             const dateCell = document.createElement('td');
             dateCell.className = 'px-6 py-4 text-gray-600 text-body-md';
-            dateCell.textContent = ticket.dateSubmitted;
-            
+            dateCell.textContent = ticket.date_submitted ? new Date(ticket.date_submitted).toLocaleString() : '—';
+
+            // Category cell
             const categoryCell = document.createElement('td');
             categoryCell.className = 'px-6 py-4';
             const categorySpan = document.createElement('span');
             categorySpan.className = 'px-2 py-1 bg-gray-100 text-gray-700 text-xs font-bold rounded';
             categorySpan.textContent = ticket.category;
             categoryCell.appendChild(categorySpan);
-            
+
+            // Company cell
             const companyCell = document.createElement('td');
             companyCell.className = 'px-6 py-4 text-sm';
-            companyCell.textContent = ticket.company;
-            
+            companyCell.textContent = ticket.company || '—';
+
+            // Urgency cell
             const urgencyCell = document.createElement('td');
             urgencyCell.className = 'px-6 py-4';
             const urgencySpan = document.createElement('span');
-            urgencySpan.className = `px-2 py-1 ${urgencyColor2} text-xs font-bold rounded`;
-            urgencySpan.textContent = this.getUrgencyLevel(ticket.urgency);
+            urgencySpan.className = `px-2 py-1 ${urgencyColor[ticket.urgency] || 'bg-gray-50'} text-xs font-bold rounded`;
+            urgencySpan.textContent = getUrgencyLevel(ticket.urgency);
             urgencyCell.appendChild(urgencySpan);
-            
+
+            // Status dropdown
             const statusCell = document.createElement('td');
             statusCell.className = 'px-6 py-4';
             const statusSelect = document.createElement('select');
-            statusSelect.className = `appearance-none w-full border ${color} py-1.5 px-3 pr-8 rounded text-xs font-bold focus:outline-none cursor-pointer`;
-            statusSelect.onchange = () => app.updateTicketStatus(ticket.id, statusSelect.value);
-            
-            const openOption = document.createElement('option');
-            openOption.value = 'Open';
-            openOption.textContent = 'OPEN';
-            if (ticket.status === 'Open') openOption.selected = true;
-            statusSelect.appendChild(openOption);
-            
-            const inProgressOption = document.createElement('option');
-            inProgressOption.value = 'In Progress';
-            inProgressOption.textContent = 'IN PROGRESS';
-            if (ticket.status === 'In Progress') inProgressOption.selected = true;
-            statusSelect.appendChild(inProgressOption);
-            
-            const resolvedOption = document.createElement('option');
-            resolvedOption.value = 'Resolved';
-            resolvedOption.textContent = 'RESOLVED';
-            if (ticket.status === 'Resolved') resolvedOption.selected = true;
-            statusSelect.appendChild(resolvedOption);
-            
+            const statusColorClass = statusColor[ticket.status] || 'bg-gray-50 text-gray-700';
+            statusSelect.className = `appearance-none w-full border ${statusColorClass} py-1.5 px-3 pr-8 rounded text-xs font-bold focus:outline-none cursor-pointer`;
+            statusSelect.onchange = async (e) => {
+                const newStatus = e.target.value;
+                await this.updateTicketStatus(ticket.id, newStatus);
+                statusSelect.className = `appearance-none w-full border ${statusColor[newStatus] || 'bg-gray-50 text-gray-700'} py-1.5 px-3 pr-8 rounded text-xs font-bold focus:outline-none cursor-pointer`;
+            };
+
+            ['Open', 'In Progress', 'Resolved'].forEach(status => {
+                const option = document.createElement('option');
+                option.value = status;
+                option.textContent = status.toUpperCase();
+                option.selected = ticket.status === status;
+                statusSelect.appendChild(option);
+            });
             statusCell.appendChild(statusSelect);
-            
-            // Create action cell with delete button
+
+            // Delete button
             const actionCell = document.createElement('td');
             actionCell.className = 'px-6 py-4';
             const deleteBtn = document.createElement('button');
             deleteBtn.className = 'px-3 py-1.5 bg-red-50 text-red-700 border border-red-200 text-xs font-bold rounded hover:bg-red-100 transition-colors';
             deleteBtn.textContent = 'DELETE';
-            deleteBtn.onclick = () => app.removeTicket(ticket.id);
+            deleteBtn.onclick = async () => {
+                const success = await this.deleteTicket(ticket.id,ticket.ticket_id);
+                if (success) {
+                    row.remove();
+                    if (tableBody.children.length === 0) {
+                        this.renderTickets([]);
+                        this.updateStats([]);
+                    }
+                }
+            };
             actionCell.appendChild(deleteBtn);
-            
-            // Append all cells to row
-            row.appendChild(idCell);
-            row.appendChild(dateCell);
-            row.appendChild(categoryCell);
-            row.appendChild(companyCell);
-            row.appendChild(urgencyCell);
-            row.appendChild(statusCell);
-            row.appendChild(actionCell);
-            
+
+            row.append(idCell, dateCell, categoryCell, companyCell, urgencyCell, statusCell, actionCell);
             tableBody.appendChild(row);
         });
     },
 
-    // Update ticket status
-    updateTicketStatus(ticketId, newStatus) {
-        let tickets = JSON.parse(storageUtil.getItem('rcl_tickets')) || [];
-        tickets = tickets.map(t => {
-            if (t.id === ticketId) {
-                t.status = newStatus;
-            }
-            return t;
-        });
-        storageUtil.setItem('rcl_tickets', JSON.stringify(tickets));
-        this.displayAdminDashboard();
-    },
-
-    // Remove ticket with confirmation
-    removeTicket(ticketId) {
-        const confirmed = confirm(`Are you sure you want to delete ticket ${ticketId}? This action cannot be undone.`);
-        
-        if (!confirmed) {
-            return;
+    async updateTicketStatus(ticketId, newStatus) {
+        const { error } = await supabaseClient
+            .from('tickets')
+            .update({ status: newStatus })
+            .eq('id', ticketId);
+        if (error) {
+            console.error('Status update failed:', error);
+            alert('Could not update status. Please try again.');
         }
-        
-        let tickets = JSON.parse(storageUtil.getItem('rcl_tickets')) || [];
-        tickets = tickets.filter(t => t.id !== ticketId);
-        storageUtil.setItem('rcl_tickets', JSON.stringify(tickets));
-        this.displayAdminDashboard();
-        alert('Ticket deleted successfully.');
     },
 
+    async deleteTicket(ticketId, ticket_id) {
+        const confirmed = confirm(`Are you sure you want to delete ticket ${ticket_id}? This action cannot be undone.`);
+        if (!confirmed) return false;
+
+        const { error } = await supabaseClient
+            .from('tickets')
+            .delete()
+            .eq('id', ticketId);   // make sure 'id' is the primary key column name
+
+        if (error) {
+            console.error('Deletion failed:', error);
+            alert('Could not delete ticket. Please try again.');
+            return false;
+        }
+        return true;
+    },
     // Display ticket details page
-    displayTicketDetails() {
-        const ticketId = storageUtil.getItem('currentTicketId');
-        const tickets = JSON.parse(storageUtil.getItem('rcl_tickets')) || [];
-        const ticket = tickets.find(t => t.id === ticketId);
+    // displayTicketDetails() {
+    //     const ticketId = storageUtil.getItem('currentTicketId');
+    //     const tickets = JSON.parse(storageUtil.getItem('rcl_tickets')) || [];
+    //     const ticket = tickets.find(t => t.id === ticketId);
 
-        if (!ticket) {
-            alert('Ticket not found!');
-            window.location.href = config.ROOT + 'admin/dashboard.html';
+    //     if (!ticket) {
+    //         alert('Ticket not found!');
+    //         this.navigate('admin-dashboard');
+    //         return;
+    //     }
+
+    //     // Set status color
+    //     const statusColorMap = {
+    //         'Open': 'bg-red-50 text-red-700',
+    //         'In Progress': 'bg-yellow-50 text-yellow-700',
+    //         'Resolved': 'bg-green-50 text-green-700'
+    //     };
+
+    //     const urgencyColorMap = {
+    //         1: 'bg-green-50 text-green-700',
+    //         2: 'bg-yellow-50 text-yellow-700',
+    //         3: 'bg-orange-50 text-orange-700',
+    //         4: 'bg-red-50 text-red-700',
+    //         5: 'bg-red-100 text-red-900'
+    //     };
+
+    //     // Populate ticket information safely
+    //     document.getElementById('ticketId').textContent = ticket.id;
+    //     document.getElementById('ticketIdInfo').textContent = ticket.id;
+    //     document.getElementById('submittedOn').textContent = ticket.dateSubmitted;
+        
+    //     const statusEl = document.getElementById('ticketStatus');
+    //     statusEl.textContent = ticket.status;
+    //     statusEl.className = `px-3 py-1.5 rounded text-sm font-bold ${statusColorMap[ticket.status] || 'bg-gray-50 text-gray-700'}`;
+
+    //     const urgencyEl = document.getElementById('ticketUrgency');
+    //     urgencyEl.textContent = this.getUrgencyLevel(ticket.urgency);
+    //     urgencyEl.className = `px-3 py-1.5 rounded text-sm font-bold ${urgencyColorMap[ticket.urgency] || 'bg-gray-50 text-gray-700'}`;
+
+    //     // Submitted By - use textContent to prevent XSS
+    //     document.getElementById('fullName').textContent = ticket.fullName;
+    //     document.getElementById('email').textContent = ticket.email;
+    //     document.getElementById('phone').textContent = ticket.phone;
+
+    //     // Issue Details - use textContent to prevent XSS
+    //     document.getElementById('category').textContent = ticket.category;
+    //     document.getElementById('company').textContent = ticket.company;
+    //     document.getElementById('location').textContent = ticket.location;
+    //     document.getElementById('specificLocation').textContent = ticket.specificLocation;
+    //     document.getElementById('description').textContent = ticket.description;
+
+    //     // Set status dropdown
+    //     document.getElementById('statusSelect').value = ticket.status;
+    // },
+    async displayTicketDetails() {
+        // Get ticket_id from URL (no localStorage needed)
+        const urlParams = new URLSearchParams(window.location.search);
+        const ticketId = urlParams.get('ticketId');
+        console.log('1. Ticket ID from URL:', ticketId);
+        
+        if (!ticketId) {
+            alert('No ticket ID in URL');
+            this.navigate('admin-dashboard');
             return;
         }
 
-        // Set status color
-        const statusColorMap = {
-            'Open': 'bg-red-50 text-red-700',
-            'In Progress': 'bg-yellow-50 text-yellow-700',
-            'Resolved': 'bg-green-50 text-green-700'
-        };
+        try {
+            console.log('2. Running Supabase query...');
+            const { data: ticket, error, status } = await supabaseClient
+                .from('tickets')
+                .select('*')
+                .eq('ticket_id', ticketId)
+                .maybeSingle();
+            
+            console.log('3. Supabase response:', { ticket, error, status });
+            
+            if (error) throw error;
+            if (!ticket) {
+                alert(`Ticket "${ticketId}" not found in database.`);
+                this.navigate('admin-dashboard');
+                return;
+            }
+            
+            // Store the internal primary key id for status updates
+            storageUtil.setItem('currentTicketInternalId', ticket.id);
 
-        const urgencyColorMap = {
-            1: 'bg-green-50 text-green-700',
-            2: 'bg-yellow-50 text-yellow-700',
-            3: 'bg-orange-50 text-orange-700',
-            4: 'bg-red-50 text-red-700',
-            5: 'bg-red-100 text-red-900'
-        };
+            // Map status & urgency colors
+            const statusColorMap = {
+                'Open': 'bg-red-50 text-red-700',
+                'In Progress': 'bg-yellow-50 text-yellow-700',
+                'Resolved': 'bg-green-50 text-green-700'
+            };
+            const urgencyColorMap = {
+                1: 'bg-green-50 text-green-700',
+                2: 'bg-yellow-50 text-yellow-700',
+                3: 'bg-orange-50 text-orange-700',
+                4: 'bg-red-50 text-red-700',
+                5: 'bg-red-100 text-red-900'
+            };
 
-        // Populate ticket information safely
-        document.getElementById('ticketId').textContent = ticket.id;
-        document.getElementById('ticketIdInfo').textContent = ticket.id;
-        document.getElementById('submittedOn').textContent = ticket.dateSubmitted;
-        
-        const statusEl = document.getElementById('ticketStatus');
-        statusEl.textContent = ticket.status;
-        statusEl.className = `px-3 py-1.5 rounded text-sm font-bold ${statusColorMap[ticket.status] || 'bg-gray-50 text-gray-700'}`;
+            // Populate header info
+            document.getElementById('ticketId').textContent = `Ticket ${ticket.ticket_id}`;
+            document.getElementById('ticketIdInfo').textContent = ticket.ticket_id;
+            document.getElementById('submittedOn').textContent = new Date(ticket.date_submitted).toLocaleString();
 
-        const urgencyEl = document.getElementById('ticketUrgency');
-        urgencyEl.textContent = this.getUrgencyLevel(ticket.urgency);
-        urgencyEl.className = `px-3 py-1.5 rounded text-sm font-bold ${urgencyColorMap[ticket.urgency] || 'bg-gray-50 text-gray-700'}`;
+            // Status badge
+            const statusEl = document.getElementById('ticketStatus');
+            statusEl.textContent = ticket.status;
+            statusEl.className = `px-3 py-1.5 rounded text-sm font-bold ${statusColorMap[ticket.status] || 'bg-gray-50 text-gray-700'}`;
 
-        // Submitted By - use textContent to prevent XSS
-        document.getElementById('fullName').textContent = ticket.fullName;
-        document.getElementById('email').textContent = ticket.email;
-        document.getElementById('phone').textContent = ticket.phone;
+            // Urgency badge
+            const urgencyEl = document.getElementById('ticketUrgency');
+            urgencyEl.textContent = this.getUrgencyLevel(ticket.urgency);
+            urgencyEl.className = `px-3 py-1.5 rounded text-sm font-bold ${urgencyColorMap[ticket.urgency] || 'bg-gray-50 text-gray-700'}`;
 
-        // Issue Details - use textContent to prevent XSS
-        document.getElementById('category').textContent = ticket.category;
-        document.getElementById('company').textContent = ticket.company;
-        document.getElementById('location').textContent = ticket.location;
-        document.getElementById('specificLocation').textContent = ticket.specificLocation;
-        document.getElementById('description').textContent = ticket.description;
+            // Submitted by
+            document.getElementById('fullName').textContent = ticket.full_name;
+            document.getElementById('email').textContent = ticket.email;
+            document.getElementById('phone').textContent = ticket.phone;
 
-        // Set status dropdown
-        document.getElementById('statusSelect').value = ticket.status;
+            // Issue details
+            document.getElementById('category').textContent = ticket.category;
+            document.getElementById('company').textContent = ticket.company || '—';
+            document.getElementById('location').textContent = ticket.location;
+            document.getElementById('specificLocation').textContent = ticket.specific_location || '—';
+            document.getElementById('description').textContent = ticket.description;
+
+            // Set current status in dropdown
+            document.getElementById('statusSelect').value = ticket.status;
+
+        } catch (err) {
+            console.error('Failed to load ticket details:', err);
+            alert('Error loading ticket details. Please try again.');
+            this.navigate('admin-dashboard');
+        }
     },
 
     // Update ticket status from details page
-    updateTicketStatusFromDetails() {
-        const ticketId = storageUtil.getItem('currentTicketId');
-        if (!ticketId) {
-            alert('Error: No ticket selected');
+    async updateTicketStatusFromDetails() {
+        const internalId = storageUtil.getItem('currentTicketInternalId');
+        if (!internalId) {
+            alert('Error: No ticket selected. Please refresh the page.');
             return;
         }
-
         const newStatus = document.getElementById('statusSelect').value;
-        
-        // Update in storage
-        let tickets = JSON.parse(storageUtil.getItem('rcl_tickets')) || [];
-        const ticketIndex = tickets.findIndex(t => t.id === ticketId);
-        if (ticketIndex !== -1) {
-            tickets[ticketIndex].status = newStatus;
-            storageUtil.setItem('rcl_tickets', JSON.stringify(tickets));
-            this.displayTicketDetails();
-            alert('Ticket status updated successfully!');
+
+        const { error } = await supabaseClient
+            .from('tickets')
+            .update({ status: newStatus })
+            .eq('id', internalId);
+
+        if (error) {
+            console.error('Status update failed:', error);
+            alert('Could not update status. Please try again.');
         } else {
-            alert('Error: Ticket not found');
+            alert('Status updated successfully!');
+            // Refresh the displayed data (re-fetch and re-render)
+            this.displayTicketDetails();
         }
-    },
+    }
     
 
 };

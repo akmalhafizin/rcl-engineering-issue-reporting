@@ -1,6 +1,5 @@
-// config.sample.js
-const config = {
-    ROOT: '',  // Leave empty for relative paths
-    ADMIN_ID: '',
-    ADMIN_PASSWORD: ''
-};
+const CONFIG = (function() {
+    const SUPABASE_URL = "https://aihjbacockwdijgjeoog.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_xGFMkrKSuS4KgJP_RrcqFw_kbVrhHNU";
+    return { SUPABASE_URL, SUPABASE_ANON_KEY };
+})();

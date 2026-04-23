@@ -100,6 +100,9 @@
         }
         body { font-family: 'Inter', sans-serif; }
     </style>
+    <script>
+        console.log('Current location:', window.location.href);
+    </script>
 </head>
 <body class="bg-background text-on-surface min-h-screen flex flex-col">
     <!-- TopAppBar -->
@@ -218,7 +221,7 @@
             </form>
         </div>
         <!-- Secondary Info Cards -->
-        <div class="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-gutter mt-12">
+        <!-- <div class="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-gutter mt-12">
             <div class="bg-white p-6 border border-outline-variant rounded shadow-sm">
                 <span class="material-symbols-outlined text-primary mb-4" data-icon="support_agent">support_agent</span>
                 <h4 class="font-h3 text-sm font-bold mb-2">Technical Support</h4>
@@ -237,7 +240,7 @@
                 <p class="text-xs text-secondary">Use your ticket ID sent via email to track repair progress.</p>
                 <a class="inline-block mt-4 text-xs font-bold text-primary border-b border-primary" href="#">TRACK ISSUE</a>
             </div>
-        </div>
+        </div> -->
     </main>
     <!-- Footer -->
     <footer class="w-full mt-auto bg-gray-50 border-t border-gray-200">
@@ -255,6 +258,7 @@
         </div>
     </footer>
     <script src="assets/js/config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="assets/js/app.js"></script>
 </body>
 </html>
