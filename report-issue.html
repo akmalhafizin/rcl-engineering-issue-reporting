@@ -127,7 +127,8 @@
         </div>
         <!-- Issue Submission Form Container -->
         <div class="max-w-4xl mx-auto bg-white border border-outline-variant shadow-sm rounded-lg overflow-hidden">
-            <form id="issueForm" class="divide-y divide-outline-variant">
+            <form method="POST" data-netlify="true" action="/success.html" id="issueForm" class="divide-y divide-outline-variant">
+                <input type="hidden" name="form-name" value="issue-report"/>
                 <!-- Section 1: Individual Details -->
                 <div class="p-8">
                     <div class="flex items-center gap-3 mb-8">

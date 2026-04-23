@@ -79,6 +79,8 @@ const app = {
         e.preventDefault();
         
         const formData = new FormData(e.target);
+        
+        // Create full ticket for local UI
         const ticket = {
             id: this.generateTicketId(),
             fullName: formData.get('fullName'),
@@ -90,25 +92,19 @@ const app = {
             specificLocation: formData.get('specificLocation'),
             description: formData.get('description'),
             urgency: parseInt(formData.get('urgency')),
-            status: 'Pending',
+            status: 'Open',
             dateSubmitted: new Date().toLocaleString(),
             timestamp: Date.now()
         };
         
-        // Get existing tickets
-        let tickets = JSON.parse(storageUtil.getItem('rcl_tickets')) || [];
-        tickets.push(ticket);
-        
-        // Save to storage
-        storageUtil.setItem('rcl_tickets', JSON.stringify(tickets));
+        // Save to localStorage for UI display
+        this.saveTicket(ticket);
         
         // Store current ticket for success page
         storageUtil.setItem('rcl_lastTicket', JSON.stringify(ticket));
         
-        // Redirect to success page
-        setTimeout(() => {
-            window.location.href = config.ROOT + 'success.html';
-        }, 500);
+        // Submit the form to Netlify
+        e.target.submit();
     },
     
     // Load and display tickets on success page
@@ -213,7 +209,14 @@ const app = {
         this.isLoggedIn = false;
         window.location.href = config.ROOT + 'index.html';
     },
-    
+
+    // Save a ticket to localStorage
+    saveTicket(ticket) {
+        let tickets = JSON.parse(storageUtil.getItem('rcl_tickets')) || [];
+        tickets.push(ticket);
+        storageUtil.setItem('rcl_tickets', JSON.stringify(tickets));
+    },
+
     // Load tickets for admin dashboard
     loadTickets() {
         if (window.location.pathname.includes('admin/dashboard')) {
@@ -236,13 +239,21 @@ const app = {
         // Update stats
         document.getElementById('totalTickets').textContent = tickets.length;
         
-        const pending = tickets.filter(t => t.status === 'Pending').length;
-        const inProgress = tickets.filter(t => t.status === 'In-Progress').length;
-        const completed = tickets.filter(t => t.status === 'Completed').length;
+        const open = tickets.filter(t => t.status === 'Open').length;
+        const inProgress = tickets.filter(t => t.status === 'In Progress').length;
+        const resolved = tickets.filter(t => t.status === 'Resolved').length;
         
-        document.getElementById('pendingTickets').textContent = pending;
+        document.getElementById('openTickets').textContent = open;
         document.getElementById('inProgressTickets').textContent = inProgress;
-        document.getElementById('completedTickets').textContent = completed;
+        document.getElementById('resolvedTickets').textContent = resolved;
+        
+        // Use the modular renderTickets function
+        this.renderTickets();
+    },
+
+    // Render tickets in the admin dashboard table
+    renderTickets() {
+        const tickets = JSON.parse(storageUtil.getItem('rcl_tickets')) || [];
         
         // Display tickets in table
         const tableBody = document.getElementById('ticketTableBody');
@@ -263,9 +274,9 @@ const app = {
             row.className = 'hover:bg-gray-50 transition-colors';
             
             const statusColor = {
-                'Pending': 'bg-red-50 text-red-700 border-red-200',
-                'In-Progress': 'bg-yellow-50 text-yellow-700 border-yellow-200',
-                'Completed': 'bg-green-50 text-green-700 border-green-200'
+                'Open': 'bg-red-50 text-red-700 border-red-200',
+                'In Progress': 'bg-yellow-50 text-yellow-700 border-yellow-200',
+                'Resolved': 'bg-green-50 text-green-700 border-green-200'
             };
             
             const urgencyColor = {
@@ -316,23 +327,23 @@ const app = {
             statusSelect.className = `appearance-none w-full border ${color} py-1.5 px-3 pr-8 rounded text-xs font-bold focus:outline-none cursor-pointer`;
             statusSelect.onchange = () => app.updateTicketStatus(ticket.id, statusSelect.value);
             
-            const pendingOption = document.createElement('option');
-            pendingOption.value = 'Pending';
-            pendingOption.textContent = 'PENDING';
-            if (ticket.status === 'Pending') pendingOption.selected = true;
-            statusSelect.appendChild(pendingOption);
+            const openOption = document.createElement('option');
+            openOption.value = 'Open';
+            openOption.textContent = 'OPEN';
+            if (ticket.status === 'Open') openOption.selected = true;
+            statusSelect.appendChild(openOption);
             
             const inProgressOption = document.createElement('option');
-            inProgressOption.value = 'In-Progress';
-            inProgressOption.textContent = 'IN-PROGRESS';
-            if (ticket.status === 'In-Progress') inProgressOption.selected = true;
+            inProgressOption.value = 'In Progress';
+            inProgressOption.textContent = 'IN PROGRESS';
+            if (ticket.status === 'In Progress') inProgressOption.selected = true;
             statusSelect.appendChild(inProgressOption);
             
-            const completedOption = document.createElement('option');
-            completedOption.value = 'Completed';
-            completedOption.textContent = 'COMPLETED';
-            if (ticket.status === 'Completed') completedOption.selected = true;
-            statusSelect.appendChild(completedOption);
+            const resolvedOption = document.createElement('option');
+            resolvedOption.value = 'Resolved';
+            resolvedOption.textContent = 'RESOLVED';
+            if (ticket.status === 'Resolved') resolvedOption.selected = true;
+            statusSelect.appendChild(resolvedOption);
             
             statusCell.appendChild(statusSelect);
             
@@ -357,7 +368,7 @@ const app = {
             tableBody.appendChild(row);
         });
     },
-    
+
     // Update ticket status
     updateTicketStatus(ticketId, newStatus) {
         let tickets = JSON.parse(storageUtil.getItem('rcl_tickets')) || [];
@@ -400,9 +411,9 @@ const app = {
 
         // Set status color
         const statusColorMap = {
-            'Pending': 'bg-red-50 text-red-700',
-            'In-Progress': 'bg-yellow-50 text-yellow-700',
-            'Completed': 'bg-green-50 text-green-700'
+            'Open': 'bg-red-50 text-red-700',
+            'In Progress': 'bg-yellow-50 text-yellow-700',
+            'Resolved': 'bg-green-50 text-green-700'
         };
 
         const urgencyColorMap = {
