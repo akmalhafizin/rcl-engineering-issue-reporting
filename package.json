@@ -8,7 +8,8 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "node generate-config.js"
+    "build": "node generate-config.js",
+    "tailwind": "tailwindcss init"
   },
   "repository": {
     "type": "git",
@@ -21,6 +22,10 @@
   "bugs": {
     "url": "https://github.com/akmalhafizin/rcl-engineering-issue-reporting/issues"
   },
-  "homepage": "https://github.com/akmalhafizin/rcl-engineering-issue-reporting#readme"
-  
+  "homepage": "https://github.com/akmalhafizin/rcl-engineering-issue-reporting#readme",
+  "devDependencies": {
+    "autoprefixer": "^10.5.0",
+    "postcss": "^8.5.10",
+    "tailwindcss": "^4.2.4"
+  }
 }
