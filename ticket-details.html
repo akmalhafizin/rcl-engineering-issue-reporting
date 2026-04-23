@@ -252,8 +252,8 @@
         // Load ticket details on page load
         document.addEventListener('DOMContentLoaded', function() {
             // Check if user is logged in
-            const isLoggedIn = window.localStorage.getItem('rcl_authed') === 'true';
-            const expiryTime = window.localStorage.getItem('rcl_session_expiry');
+            const isLoggedIn = storageUtil.getItem('rcl_authed') === 'true';
+            const expiryTime = storageUtil.getItem('rcl_session_expiry');
             
             // Validate session
             if (!isLoggedIn || !expiryTime || Date.now() > parseInt(expiryTime)) {
@@ -262,7 +262,7 @@
             }
             
             // Check if ticket ID exists
-            const ticketId = window.localStorage.getItem('currentTicketId');
+            const ticketId = storageUtil.getItem('currentTicketId');
             if (!ticketId) {
                 window.location.href = config.ROOT + 'admin/dashboard.html';
                 return;

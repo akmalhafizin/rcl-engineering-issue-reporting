@@ -1,3 +1,10 @@
+// Storage utility to handle localStorage binding correctly
+const storageUtil = {
+    getItem: window.localStorage.getItem.bind(window.localStorage),
+    setItem: window.localStorage.setItem.bind(window.localStorage),
+    removeItem: window.localStorage.removeItem.bind(window.localStorage)
+};
+
 // RCL Engineering Issue Reporting App
 const app = {
     currentPage: 'home',
@@ -36,7 +43,7 @@ const app = {
     navigate(page, ticketId = null) {
         // If trying to access login but already logged in with valid session, go to dashboard
         if (page === 'login' && this.isLoggedIn) {
-            const expiryTime = window.localStorage.getItem('rcl_session_expiry');
+            const expiryTime = storageUtil.getItem('rcl_session_expiry');
             if (expiryTime && Date.now() <= parseInt(expiryTime)) {
                 page = 'admin-dashboard';
             }
@@ -60,7 +67,7 @@ const app = {
             let url = pages[page];
             if (page === 'ticket-details' && ticketId) {
                 url += '?ticketId=' + ticketId;
-                window.localStorage.setItem('currentTicketId', ticketId);
+                storageUtil.setItem('currentTicketId', ticketId);
             }
             window.location.href = url;
             this.currentPage = page;
@@ -89,14 +96,14 @@ const app = {
         };
         
         // Get existing tickets
-        let tickets = JSON.parse(window.localStorage.getItem('rcl_tickets')) || [];
+        let tickets = JSON.parse(storageUtil.getItem('rcl_tickets')) || [];
         tickets.push(ticket);
         
-        // Save to window.localStorage
-        window.localStorage.setItem('rcl_tickets', JSON.stringify(tickets));
+        // Save to storage
+        storageUtil.setItem('rcl_tickets', JSON.stringify(tickets));
         
         // Store current ticket for success page
-        window.localStorage.setItem('rcl_lastTicket', JSON.stringify(ticket));
+        storageUtil.setItem('rcl_lastTicket', JSON.stringify(ticket));
         
         // Redirect to success page
         setTimeout(() => {
@@ -106,7 +113,7 @@ const app = {
     
     // Load and display tickets on success page
     displaySuccessTicket() {
-        const ticket = JSON.parse(window.localStorage.getItem('rcl_lastTicket'));
+        const ticket = JSON.parse(storageUtil.getItem('rcl_lastTicket'));
         if (ticket) {
             document.getElementById('summaryCategory').textContent = ticket.category;
             document.getElementById('summaryUrgency').textContent = this.getUrgencyLevel(ticket.urgency);
@@ -158,11 +165,11 @@ const app = {
             // Set session expiry (8 hours if remember me, otherwise session only)
             const expiryTime = rememberMe ? loginTime + (8 * 60 * 60 * 1000) : loginTime + (60 * 60 * 1000); // 8 hours or 1 hour
             
-            window.localStorage.setItem('rcl_authed', 'true');
-            window.localStorage.setItem('rcl_admin_name', 'Admin User');
-            window.localStorage.setItem('rcl_login_time', loginTime.toString());
-            window.localStorage.setItem('rcl_session_expiry', expiryTime.toString());
-            window.localStorage.setItem('rcl_remember_me', rememberMe.toString());
+            storageUtil.setItem('rcl_authed', 'true');
+            storageUtil.setItem('rcl_admin_name', 'Admin User');
+            storageUtil.setItem('rcl_login_time', loginTime.toString());
+            storageUtil.setItem('rcl_session_expiry', expiryTime.toString());
+            storageUtil.setItem('rcl_remember_me', rememberMe.toString());
             
             this.isLoggedIn = true;
             
@@ -177,8 +184,8 @@ const app = {
     
     // Check login status
     checkLoginStatus() {
-        const isAuthed = window.localStorage.getItem('rcl_authed') === 'true';
-        const expiryTime = window.localStorage.getItem('rcl_session_expiry');
+        const isAuthed = storageUtil.getItem('rcl_authed') === 'true';
+        const expiryTime = storageUtil.getItem('rcl_session_expiry');
         
         // Check if session has expired
         if (isAuthed && expiryTime) {
@@ -198,11 +205,11 @@ const app = {
     
     // Logout
     logout() {
-        window.localStorage.removeItem('rcl_authed');
-        window.localStorage.removeItem('rcl_admin_name');
-        window.localStorage.removeItem('rcl_login_time');
-        window.localStorage.removeItem('rcl_session_expiry');
-        window.localStorage.removeItem('rcl_remember_me');
+        storageUtil.removeItem('rcl_authed');
+        storageUtil.removeItem('rcl_admin_name');
+        storageUtil.removeItem('rcl_login_time');
+        storageUtil.removeItem('rcl_session_expiry');
+        storageUtil.removeItem('rcl_remember_me');
         this.isLoggedIn = false;
         window.location.href = config.ROOT + 'index.html';
     },
@@ -224,7 +231,7 @@ const app = {
     
     // Display admin dashboard
     displayAdminDashboard() {
-        const tickets = JSON.parse(window.localStorage.getItem('rcl_tickets')) || [];
+        const tickets = JSON.parse(storageUtil.getItem('rcl_tickets')) || [];
         
         // Update stats
         document.getElementById('totalTickets').textContent = tickets.length;
@@ -343,21 +350,21 @@ const app = {
     
     // Update ticket status
     updateTicketStatus(ticketId, newStatus) {
-        let tickets = JSON.parse(window.localStorage.getItem('rcl_tickets')) || [];
+        let tickets = JSON.parse(storageUtil.getItem('rcl_tickets')) || [];
         tickets = tickets.map(t => {
             if (t.id === ticketId) {
                 t.status = newStatus;
             }
             return t;
         });
-        window.localStorage.setItem('rcl_tickets', JSON.stringify(tickets));
+        storageUtil.setItem('rcl_tickets', JSON.stringify(tickets));
         this.displayAdminDashboard();
     },
 
     // Display ticket details page
     displayTicketDetails() {
-        const ticketId = window.localStorage.getItem('currentTicketId');
-        const tickets = JSON.parse(window.localStorage.getItem('rcl_tickets')) || [];
+        const ticketId = storageUtil.getItem('currentTicketId');
+        const tickets = JSON.parse(storageUtil.getItem('rcl_tickets')) || [];
         const ticket = tickets.find(t => t.id === ticketId);
 
         if (!ticket) {
@@ -412,7 +419,7 @@ const app = {
 
     // Update ticket status from details page
     updateTicketStatusFromDetails() {
-        const ticketId = window.localStorage.getItem('currentTicketId');
+        const ticketId = storageUtil.getItem('currentTicketId');
         if (!ticketId) {
             alert('Error: No ticket selected');
             return;
@@ -421,11 +428,11 @@ const app = {
         const newStatus = document.getElementById('statusSelect').value;
         
         // Update in storage
-        let tickets = JSON.parse(window.localStorage.getItem('rcl_tickets')) || [];
+        let tickets = JSON.parse(storageUtil.getItem('rcl_tickets')) || [];
         const ticketIndex = tickets.findIndex(t => t.id === ticketId);
         if (ticketIndex !== -1) {
             tickets[ticketIndex].status = newStatus;
-            window.localStorage.setItem('rcl_tickets', JSON.stringify(tickets));
+            storageUtil.setItem('rcl_tickets', JSON.stringify(tickets));
             this.displayTicketDetails();
             alert('Ticket status updated successfully!');
         } else {
