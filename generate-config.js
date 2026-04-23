@@ -6,5 +6,5 @@ const config = {
     ADMIN_PASSWORD: '${process.env.ADMIN_PASSWORD}'
 };
 `;
-fs.writeFileSync('./config.js', configContent);
+fs.writeFileSync('./assets/js/config.js', configContent);
 console.log('✅ config.js generated from environment variables');
