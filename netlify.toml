@@ -1,7 +1,7 @@
 # Netlify Configuration for RCL Engineering Issue Reporting System
 
 [build]
-  command = "node generate-config.js"
+  command = "npm run build"
   publish = "."
 
 [[redirects]]
