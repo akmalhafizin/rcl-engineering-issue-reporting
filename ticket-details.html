@@ -194,6 +194,14 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Attachments -->
+                    <div class="bg-white border border-gray-200 rounded-lg p-6">
+                        <h2 class="font-h3 text-h3 text-on-surface mb-4">Attachments</h2>
+                        <div id="attachmentsContainer" class="space-y-2">
+                            <p class="text-gray-500 text-sm">No attachments uploaded.</p>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Sidebar -->
@@ -249,29 +257,5 @@
     <script src="assets/js/config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="assets/js/app.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Check login
-            const isLoggedIn = storageUtil.getItem('rcl_authed') === 'true';
-            const expiryTime = storageUtil.getItem('rcl_session_expiry');
-            if (!isLoggedIn || !expiryTime || Date.now() > parseInt(expiryTime)) {
-                window.location.href = config.ROOT + 'admin/login.html';
-                return;
-            }
-
-            // Get ticket_id from URL query parameter
-            const urlParams = new URLSearchParams(window.location.search);
-            const ticketId = urlParams.get('ticketId');
-            if (!ticketId) {
-                alert('No ticket ID provided.');
-                window.location.href = config.ROOT + 'admin/dashboard.html';
-                return;
-            }
-
-            // Store it temporarily so displayTicketDetails can use it
-            storageUtil.setItem('currentTicketId', ticketId);
-            app.displayTicketDetails();
-        });
-    </script>
 </body>
 </html>

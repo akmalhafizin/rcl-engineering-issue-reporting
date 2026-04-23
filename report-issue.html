@@ -130,8 +130,9 @@
         </div>
         <!-- Issue Submission Form Container -->
         <div class="max-w-4xl mx-auto bg-white border border-outline-variant shadow-sm rounded-lg overflow-hidden">
-            <form method="POST" data-netlify="true" action="/success.html" id="issueForm" class="divide-y divide-outline-variant">
-                <input type="hidden" name="form-name" value="issue-report"/>
+            <!-- <form method="POST" data-netlify="true" action="/success.html" id="issueForm" class="divide-y divide-outline-variant"> -->
+            <form method="POST" id="issueForm" class="divide-y divide-outline-variant">
+                <!-- <input type="hidden" name="form-name" value="issue-report"/> -->
                 <!-- Section 1: Individual Details -->
                 <div class="p-8">
                     <div class="flex items-center gap-3 mb-8">
@@ -188,6 +189,19 @@
                         <div class="space-y-2">
                             <label class="font-label-sm text-label-sm text-on-surface-variant">ISSUE DESCRIPTION</label>
                             <textarea class="w-full p-4 border border-outline rounded focus:ring-1 focus:ring-primary focus:border-primary bg-surface-bright outline-none transition-all" placeholder="Provide a detailed description of the engineering fault or facility issue..." rows="4" name="description" required></textarea>
+                        </div>
+                        <!-- Image Proofs -->
+                        <div class="space-y-2 mt-4">
+                            <label class="font-label-sm text-label-sm text-on-surface-variant">IMAGE PROOF (multiple)</label>
+                            <input type="file" name="imageProofs" id="imageProofs" multiple accept="image/jpeg,image/png,image/gif,image/webp" required class="w-full p-2 border border-outline rounded bg-surface-bright"/>
+                            <p class="text-xs text-secondary">Attach at least one image showing the issue (JPG, PNG, GIF, WEBP).</p>
+                        </div>
+
+                        <!-- Contract Proofs -->
+                        <div class="space-y-2 mt-4">
+                            <label class="font-label-sm text-label-sm text-on-surface-variant">CONTRACT PROOF</label>
+                            <input type="file" name="contractProofs" id="contractProofs" multiple accept="image/jpeg,image/png,image/gif,image/webp,application/pdf" class="w-full p-2 border border-outline rounded bg-surface-bright"/>
+                            <p class="text-xs text-secondary">Attach contract documents or warranty certificates (images or PDF).</p>
                         </div>
                         <div class="space-y-6 pt-4">
                             <div class="flex justify-between items-center">

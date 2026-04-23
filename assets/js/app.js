@@ -16,18 +16,41 @@ const app = {
     isLoggedIn: false,
     
     // Initialize the app
-    init() {
-        this.checkLoginStatus();   // async – we'll handle properly
+    async init() {
+        // Wait for session check to complete
+        await this.checkLoginStatus();
         this.setupEventListeners();
-        if (window.location.pathname.includes('admin/dashboard')) {
-            this.loadTickets();
+
+        const path = window.location.pathname;
+
+        // Protected pages – require login
+        if (path.includes('admin/dashboard') || path.includes('ticket-details')) {
+            if (!this.isLoggedIn) {
+                this.navigate('login');
+                return;
+            }
         }
-        if (window.location.pathname.includes('ticket-details')) {
+
+        // Page-specific initialisation
+        if (path.includes('admin/dashboard')) {
+            this.loadTickets();
+        } 
+        else if (path.includes('ticket-details')) {
+            // Read ticketId from URL query string
+            const urlParams = new URLSearchParams(window.location.search);
+            const ticketId = urlParams.get('ticketId');
+            if (!ticketId) {
+                alert('No ticket ID provided.');
+                this.navigate('admin-dashboard');
+                return;
+            }
+            storageUtil.setItem('currentTicketId', ticketId);
             this.displayTicketDetails();
         }
-        if (window.location.pathname.includes('success')) {
+        else if (path.includes('success')) {
             this.displaySuccessTicket();
         }
+
         console.log('RCL Engineering App Initialized');
     },
     
@@ -87,7 +110,12 @@ const app = {
         e.preventDefault();  // already prevents default
 
         const formData = new FormData(e.target);  // e.target is the form
-
+        
+        const imageFiles = Array.from(formData.getAll('imageProofs')).filter(f => f.size > 0);
+        if (imageFiles.length === 0) {
+            alert('Please provide at least one image proof of the issue.');
+            return;
+}
         const ticket = {
             ticket_id: this.generateTicketId(),   // use this.methodName()
             full_name: formData.get('fullName'),
@@ -100,9 +128,25 @@ const app = {
             description: formData.get('description'),
             urgency: parseInt(formData.get('urgency')),
             status: 'Open',
-            date_submitted: new Date().toISOString()  // ✅ ISO format
+            date_submitted: new Date().toISOString(),  // ✅ ISO format
+            attachments: []
             // timestamp: Date.now()  // optional – you can omit
         };
+
+        // Upload files to Supabase Storage
+        const contractFiles = Array.from(formData.getAll('contractProofs')).filter(f => f.size > 0);
+        const allFiles = [...imageFiles, ...contractFiles];
+
+        if (allFiles.length > 0) {
+            try {
+                const uploadedUrls = await this.uploadFiles(allFiles, ticket.ticket_id);
+                ticket.attachments = uploadedUrls;
+            } catch (err) {
+                console.error('File upload failed:', err);
+                alert('Failed to upload one or more files. Please try again.');
+                return; // stop submission
+            }
+        }
 
         try {
             const { error } = await supabaseClient
@@ -112,12 +156,7 @@ const app = {
             if (error) throw error;
 
             if (!error) {
-                storageUtil.setItem('rcl_lastTicket', JSON.stringify({
-                    id: ticket.ticket_id,          // use ticket_id as display ID
-                    category: ticket.category,
-                    urgency: ticket.urgency,
-                    dateSubmitted: ticket.date_submitted
-                }));
+                storageUtil.setItem('rcl_lastTicket', JSON.stringify(ticket));
                 this.navigate('success');
             }
         } catch (err) {
@@ -126,6 +165,28 @@ const app = {
             // Do NOT redirect – stay on the form
         }
     },    
+
+    // Helper: upload multiple files to Supabase Storage
+    async uploadFiles(files, ticketId) {
+        const uploaded = [];
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            // Create a unique path: ticketId/timestamp_filename
+            const ext = file.name.split('.').pop();
+            const path = `${ticketId}/${Date.now()}_${i}.${ext}`;
+            const { data, error } = await supabaseClient.storage
+                .from('ticket-attachments')
+                .upload(path, file);
+            if (error) throw error;
+            // Get public URL
+            const { data: { publicUrl } } = supabaseClient.storage
+                .from('ticket-attachments')
+                .getPublicUrl(path);
+            uploaded.push(publicUrl);
+        }
+        return uploaded;
+    },
+
     // Load and display tickets on success page
     displaySuccessTicket() {
         const ticket = JSON.parse(storageUtil.getItem('rcl_lastTicket'));
@@ -135,6 +196,54 @@ const app = {
             document.getElementById('summaryUrgency').textContent = this.getUrgencyLevel(ticket.urgency);
             document.getElementById('summaryId').textContent = ticket.id;
             document.getElementById('summaryDate').textContent = ticket.dateSubmitted ? new Date(ticket.dateSubmitted).toLocaleString() : '—';
+            const container = document.getElementById('attachmentsContainer');
+                if (container && ticket.attachments && ticket.attachments.length) {
+                    container.innerHTML = ''; // clear any existing content
+                    // Add a heading
+                    const heading = document.createElement('h3');
+                    heading.className = 'text-lg font-bold text-gray-800 mb-3 mt-4';
+                    heading.textContent = '📎 Attached Proofs';
+                    container.appendChild(heading);
+
+                    const grid = document.createElement('div');
+                    grid.className = 'grid grid-cols-1 sm:grid-cols-2 gap-3';
+
+                    ticket.attachments.forEach(url => {
+                        // Extract file name from URL (last part after '/')
+                        const fileName = decodeURIComponent(url.split('/').pop()) || 'attachment';
+                        const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
+                        
+                        const card = document.createElement('a');
+                        card.href = url;
+                        card.target = '_blank';
+                        card.className = 'flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 hover:shadow-md transition-all duration-200 group cursor-pointer';
+                        
+                        // Icon
+                        const iconSpan = document.createElement('span');
+                        iconSpan.className = 'material-symbols-outlined text-2xl text-primary-container';
+                        iconSpan.textContent = isImage ? 'image' : 'description';
+                        
+                        // File info
+                        const infoDiv = document.createElement('div');
+                        infoDiv.className = 'flex-1 min-w-0';
+                        const nameSpan = document.createElement('p');
+                        nameSpan.className = 'text-sm font-medium text-gray-800 truncate';
+                        nameSpan.textContent = fileName;
+                        const actionSpan = document.createElement('p');
+                        actionSpan.className = 'text-xs text-primary group-hover:underline';
+                        actionSpan.textContent = 'Click to view';
+                        infoDiv.appendChild(nameSpan);
+                        infoDiv.appendChild(actionSpan);
+                        
+                        card.appendChild(iconSpan);
+                        card.appendChild(infoDiv);
+                        grid.appendChild(card);
+                    });
+                    
+                    container.appendChild(grid);
+                } else if (container) {
+                    container.innerHTML = '<p class="text-sm text-gray-500 mt-2">No attachments uploaded.</p>';
+                }
         }
     },
     
@@ -513,86 +622,134 @@ const app = {
     //     document.getElementById('statusSelect').value = ticket.status;
     // },
     async displayTicketDetails() {
-        // Get ticket_id from URL (no localStorage needed)
         const urlParams = new URLSearchParams(window.location.search);
         const ticketId = urlParams.get('ticketId');
-        console.log('1. Ticket ID from URL:', ticketId);
-        
         if (!ticketId) {
-            alert('No ticket ID in URL');
+            alert('No ticket ID provided.');
             this.navigate('admin-dashboard');
             return;
         }
 
         try {
-            console.log('2. Running Supabase query...');
-            const { data: ticket, error, status } = await supabaseClient
+            const { data: ticket, error } = await supabaseClient
                 .from('tickets')
                 .select('*')
                 .eq('ticket_id', ticketId)
-                .maybeSingle();
-            
-            console.log('3. Supabase response:', { ticket, error, status });
-            
+                .single();
+
             if (error) throw error;
             if (!ticket) {
-                alert(`Ticket "${ticketId}" not found in database.`);
+                alert('Ticket not found');
                 this.navigate('admin-dashboard');
                 return;
             }
-            
-            // Store the internal primary key id for status updates
+
+            // Store internal id for status updates
             storageUtil.setItem('currentTicketInternalId', ticket.id);
 
-            // Map status & urgency colors
-            const statusColorMap = {
-                'Open': 'bg-red-50 text-red-700',
-                'In Progress': 'bg-yellow-50 text-yellow-700',
-                'Resolved': 'bg-green-50 text-green-700'
-            };
-            const urgencyColorMap = {
-                1: 'bg-green-50 text-green-700',
-                2: 'bg-yellow-50 text-yellow-700',
-                3: 'bg-orange-50 text-orange-700',
-                4: 'bg-red-50 text-red-700',
-                5: 'bg-red-100 text-red-900'
-            };
+            // Populate all text fields (same as before)
+            this._populateTicketFields(ticket);
 
-            // Populate header info
-            document.getElementById('ticketId').textContent = `Ticket ${ticket.ticket_id}`;
-            document.getElementById('ticketIdInfo').textContent = ticket.ticket_id;
-            document.getElementById('submittedOn').textContent = new Date(ticket.date_submitted).toLocaleString();
-
-            // Status badge
-            const statusEl = document.getElementById('ticketStatus');
-            statusEl.textContent = ticket.status;
-            statusEl.className = `px-3 py-1.5 rounded text-sm font-bold ${statusColorMap[ticket.status] || 'bg-gray-50 text-gray-700'}`;
-
-            // Urgency badge
-            const urgencyEl = document.getElementById('ticketUrgency');
-            urgencyEl.textContent = this.getUrgencyLevel(ticket.urgency);
-            urgencyEl.className = `px-3 py-1.5 rounded text-sm font-bold ${urgencyColorMap[ticket.urgency] || 'bg-gray-50 text-gray-700'}`;
-
-            // Submitted by
-            document.getElementById('fullName').textContent = ticket.full_name;
-            document.getElementById('email').textContent = ticket.email;
-            document.getElementById('phone').textContent = ticket.phone;
-
-            // Issue details
-            document.getElementById('category').textContent = ticket.category;
-            document.getElementById('company').textContent = ticket.company || '—';
-            document.getElementById('location').textContent = ticket.location;
-            document.getElementById('specificLocation').textContent = ticket.specific_location || '—';
-            document.getElementById('description').textContent = ticket.description;
-
-            // Set current status in dropdown
-            document.getElementById('statusSelect').value = ticket.status;
+            // --- Render attachments prettily ---
+            this._renderAttachments(ticket.attachments);
 
         } catch (err) {
             console.error('Failed to load ticket details:', err);
             alert('Error loading ticket details. Please try again.');
             this.navigate('admin-dashboard');
         }
+    },
+
+    // Helper: populate basic ticket info (keeps main method clean)
+    _populateTicketFields(ticket) {
+        const statusColorMap = {
+            'Open': 'bg-red-50 text-red-700',
+            'In Progress': 'bg-yellow-50 text-yellow-700',
+            'Resolved': 'bg-green-50 text-green-700'
+        };
+        const urgencyColorMap = {
+            1: 'bg-green-50 text-green-700',
+            2: 'bg-yellow-50 text-yellow-700',
+            3: 'bg-orange-50 text-orange-700',
+            4: 'bg-red-50 text-red-700',
+            5: 'bg-red-100 text-red-900'
+        };
+
+        document.getElementById('ticketId').textContent = `Ticket ${ticket.ticket_id}`;
+        document.getElementById('ticketIdInfo').textContent = ticket.ticket_id;
+        document.getElementById('submittedOn').textContent = new Date(ticket.date_submitted).toLocaleString();
+
+        const statusEl = document.getElementById('ticketStatus');
+        statusEl.textContent = ticket.status;
+        statusEl.className = `px-3 py-1.5 rounded text-sm font-bold ${statusColorMap[ticket.status] || 'bg-gray-50 text-gray-700'}`;
+
+        const urgencyEl = document.getElementById('ticketUrgency');
+        urgencyEl.textContent = this.getUrgencyLevel(ticket.urgency);
+        urgencyEl.className = `px-3 py-1.5 rounded text-sm font-bold ${urgencyColorMap[ticket.urgency] || 'bg-gray-50 text-gray-700'}`;
+
+        document.getElementById('fullName').textContent = ticket.full_name;
+        document.getElementById('email').textContent = ticket.email || '—';
+        document.getElementById('phone').textContent = ticket.phone;
+        document.getElementById('category').textContent = ticket.category;
+        document.getElementById('company').textContent = ticket.company || '—';
+        document.getElementById('location').textContent = ticket.location;
+        document.getElementById('specificLocation').textContent = ticket.specific_location || '—';
+        document.getElementById('description').textContent = ticket.description;
+
+        document.getElementById('statusSelect').value = ticket.status;
+    },
+
+    // Helper: render pretty attachment grid
+    _renderAttachments(attachments) {
+        const container = document.getElementById('attachmentsContainer');
+        if (!container) return;
+
+        // Clear any existing content
+        container.innerHTML = '';
+
+        if (!attachments || !Array.isArray(attachments) || attachments.length === 0) {
+            container.innerHTML = '<p class="text-gray-500 text-sm">No attachments uploaded.</p>';
+            return;
+        }
+
+        const grid = document.createElement('div');
+        grid.className = 'grid grid-cols-1 sm:grid-cols-2 gap-3';
+
+        attachments.forEach(url => {
+            // Extract file name from URL (last part after '/')
+            let fileName = decodeURIComponent(url.split('/').pop()) || 'attachment';
+            // Limit length for display
+            if (fileName.length > 40) fileName = fileName.substring(0, 37) + '...';
+            const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
+
+            const card = document.createElement('a');
+            card.href = url;
+            card.target = '_blank';
+            card.className = 'flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 hover:shadow-md transition-all duration-200 group cursor-pointer';
+
+            // Icon
+            const iconSpan = document.createElement('span');
+            iconSpan.className = 'material-symbols-outlined text-2xl text-primary-container';
+            iconSpan.textContent = isImage ? 'image' : 'description';
+
+            // Info div
+            const infoDiv = document.createElement('div');
+            infoDiv.className = 'flex-1 min-w-0';
+            const nameSpan = document.createElement('p');
+            nameSpan.className = 'text-sm font-medium text-gray-800 truncate';
+            nameSpan.textContent = fileName;
+            const actionSpan = document.createElement('p');
+            actionSpan.className = 'text-xs text-primary group-hover:underline';
+            actionSpan.textContent = 'Click to view';
+            infoDiv.appendChild(nameSpan);
+            infoDiv.appendChild(actionSpan);
+
+            card.appendChild(iconSpan);
+            card.appendChild(infoDiv);
+            grid.appendChild(card);
+        });
+
+        container.appendChild(grid);
     },
 
     // Update ticket status from details page
