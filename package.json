@@ -7,7 +7,9 @@
     "doc": "docs"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "npm run generate-config && your-actual-build-command",
+    "generate-config": "node generate-config.js"
   },
   "repository": {
     "type": "git",
@@ -21,4 +23,5 @@
     "url": "https://github.com/akmalhafizin/rcl-engineering-issue-reporting/issues"
   },
   "homepage": "https://github.com/akmalhafizin/rcl-engineering-issue-reporting#readme"
+  
 }
