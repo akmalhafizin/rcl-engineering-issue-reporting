@@ -9,6 +9,12 @@ const app = {
         this.setupEventListeners();
         this.checkLoginStatus();
         console.log('RCL Engineering App Initialized');
+        if (window.localStorage) {
+            localStorage.getItem = localStorage.getItem.bind(localStorage);
+            localStorage.setItem = localStorage.setItem.bind(localStorage);
+            localStorage.removeItem = localStorage.removeItem.bind(localStorage);
+            localStorage.clear = localStorage.clear.bind(localStorage);
+        }
     },
     
     // Setup event listeners
